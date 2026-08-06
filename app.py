@@ -3,81 +3,92 @@ import pandas as pd
 from datetime import date
 
 st.set_page_config(
-    page_title="Cotizador Gratuito Isapre - Asesoría de Salud",
-    page_icon="🩺",
+    page_title="Simulador Multi-Isapre | Asesoría Independiente",
+    page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Estilos CSS con paleta de colores del sector Salud (Turquesa / Verde Menta)
+# Estilos CSS inspirados en tonos azul, cian y naranja (estilo Nueva Masvida)
+# con sellos de independencia técnica.
 st.markdown("""
     <style>
     .stApp {
         background-color: #F8FAFC;
     }
-    .main-title {
-        color: #0F766E;
-        font-size: 2.3rem;
+    
+    /* Header Principal */
+    .main-header {
+        background: linear-gradient(135deg, #0284C7 0%, #0369A1 50%, #1E3A8A 100%);
+        padding: 2.2rem 1.5rem;
+        border-radius: 16px;
+        color: white;
+        text-align: center;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.3);
+    }
+    
+    /* Insignia de Independencia */
+    .neutral-badge {
+        background-color: #FFEDD5;
+        border: 1px solid #FDBA74;
+        color: #C2410C;
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-size: 0.88rem;
+        font-weight: 700;
+        display: inline-block;
+        margin-bottom: 0.8rem;
+    }
+
+    /* Tarjeta de métricas */
+    .metric-card {
+        background-color: #FFFFFF;
+        border: 2px solid #38BDF8;
+        border-radius: 12px;
+        padding: 1.2rem;
+        text-align: center;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .metric-value {
+        font-size: 1.9rem;
         font-weight: 800;
-        text-align: center;
-        margin-bottom: 0.2rem;
+        color: #0284C7;
     }
-    .sub-title {
-        color: #334155;
-        font-size: 1.1rem;
-        text-align: center;
-        margin-bottom: 1.8rem;
+    .metric-label {
+        font-size: 0.9rem;
+        color: #475569;
+        font-weight: 600;
     }
-    .health-card {
-        background-color: #F0FDF4;
-        border: 1px solid #BBF7D0;
-        border-radius: 10px;
-        padding: 1rem;
-        text-align: center;
-    }
+
+    /* Botón Naranja Destacado (Call To Action) */
     .stButton>button {
-        background-color: #0D9488 !important;
+        background: linear-gradient(135deg, #EA580C 0%, #C2410C 100%) !important;
         color: white !important;
-        font-size: 1.15rem !important;
-        font-weight: bold !important;
-        padding: 0.75rem 2rem !important;
-        border-radius: 8px !important;
+        font-size: 1.2rem !important;
+        font-weight: 800 !important;
+        padding: 0.85rem 2rem !important;
+        border-radius: 12px !important;
         border: none !important;
         width: 100% !important;
-        box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.3);
+        box-shadow: 0 6px 15px -3px rgba(234, 88, 12, 0.4);
+        transition: all 0.2s ease-in-out;
     }
     .stButton>button:hover {
-        background-color: #0F766E !important;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px -3px rgba(234, 88, 12, 0.5);
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Listas de Opciones Técnicas de Previsión y AFP
+# Listas Técnicas
 LISTA_PREVISION = [
-    "Fonasa",
-    "--- ISAPRES ABIERTAS ---",
-    "Banmédica",
-    "Colmena",
-    "Consalud",
-    "Cruz Blanca",
-    "Nueva Masvida",
-    "Vida Tres",
-    "Esencial",
-    "--- ISAPRES CERRADAS DE EMPRESA ---",
-    "ISalud",
-    "Cruz del Norte",
-    "Fundación",
-    "Isapre San Lorenzo",
-    "Isapre Fusat",
-    "Isapre Chuquicamata",
-    "--- OTROS ---",
-    "Dipreca / Capredena",
-    "Sin previsión actualmente"
+    "Fonasa", "Banmédica", "Colmena", "Consalud", "Cruz Blanca", 
+    "Nueva Masvida", "Vida Tres", "Esencial", "ISalud / Empresa", 
+    "Dipreca / Capredena", "Sin previsión"
 ]
-
-LISTA_AFPS = ["Habitat", "Capital", "Cuprum", "Modelo", "PlanVital", "Provida", "Uno", "No cotiza en AFP"]
+LISTA_AFPS = ["Habitat", "Capital", "Cuprum", "Modelo", "PlanVital", "Provida", "Uno", "No cotiza"]
 SITUACION_LABORAL = ["Dependiente", "Independiente", "Pensionado", "Voluntario", "Cesante"]
-
 LISTA_REGIONES = [
     "Arica y Parinacota", "Tarapacá", "Antofagasta", "Atacama", "Coquimbo",
     "Valparaíso", "Región Metropolitana", "O'Higgins", "Maule", "Ñuble",
@@ -96,6 +107,7 @@ if "prospectos" not in st.session_state:
             "Situación Laboral": "Dependiente",
             "AFP": "Habitat",
             "Renta Imponible ($)": 1800000,
+            "7% Legal ($)": 126000,
             "Región": "Región Metropolitana",
             "Comuna": "Providencia",
             "Estado": "📄 En cotización"
@@ -106,97 +118,125 @@ ESTADOS = ["📞 Por contactar", "📄 En cotización", "🩺 Evaluando médica"
 
 # Navegación Privada
 st.sidebar.title("📍 Navegación Privada")
-modo = st.sidebar.radio("Selecciona vista:", ["📝 Formulario Clientes (Publicidad)", "🔒 CRM Interno Ventas"], index=0)
+modo = st.sidebar.radio("Selecciona vista:", ["💡 Simulador e Interactivo (Publicidad)", "🔒 CRM Interno Ventas"], index=0)
 
 # -----------------------------------------------------------------------------
-# VISTA 1: FORMULARIO PÚBLICO CLIENTES
+# VISTA 1: SIMULADOR INTERACTIVO PÚBLICO
 # -----------------------------------------------------------------------------
-if modo == "📝 Formulario Clientes (Publicidad)":
+if modo == "💡 Simulador e Interactivo (Publicidad)":
     
-    st.markdown('<div class="main-title">🩺 Cotización Personalizada de Isapre</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-title">Compara alternativas de salud y optimiza tu 7% legal con asesoría gratuita.</div>', unsafe_allow_html=True)
+    # Encabezado Comercial con Aclaración de Independencia
+    st.markdown("""
+        <div class="main-header">
+            <div class="neutral-badge">🛡️ Consultoría Privada e Independiente</div>
+            <h1 style="font-size: 2.4rem; font-weight: 800; margin-bottom: 0.4rem;">Simulador de Planes de Salud e Isapre</h1>
+            <p style="font-size: 1.15rem; opacity: 0.95; max-width: 800px; margin: 0 auto;">
+                Calcula tu 7% legal en tiempo real y compara de forma neutral las mejores alternativas entre todas las Isapres del mercado chileno.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # Bloques de beneficio
-    col_b1, col_b2, col_b3 = st.columns(3)
-    with col_b1:
-        st.markdown('<div class="health-card">🏥 <b>Todas las Isapres</b><br><small>Revisión de planes abiertos del mercado.</small></div>', unsafe_allow_html=True)
-    with col_b2:
-        st.markdown('<div class="health-card">⚡ <b>Asesoría 100% Gratuita</b><br><small>Respuesta rápida vía WhatsApp.</small></div>', unsafe_allow_html=True)
-    with col_b3:
-        st.markdown('<div class="health-card">🛡️ <b>Confidencial</b><br><small>Protección estricta de datos de salud.</small></div>', unsafe_allow_html=True)
+    # SECCIÓN INTERACTIVA 1: CÁLCULO EN TIEMPO REAL
+    st.subheader("⚡ Paso 1: Calcula tu 7% legal aportable")
+    st.caption("Desliza el monto de tu sueldo bruto imponible para calcular tu capacidad de cotización.")
+    
+    col_s1, col_s2 = st.columns([2, 1])
+    
+    with col_s1:
+        renta_sim = st.slider(
+            "Selecciona tu Renta Imponible mensual ($ CLP):",
+            min_value=500000,
+            max_value=5000000,
+            value=1500000,
+            step=50000,
+            format="$%d"
+        )
+        cargas_sim = st.number_input("👨‍👩‍👧 ¿Cuántas cargas familiares vas a incluir?", min_value=0, max_value=8, value=0)
 
+    # Cálculos en Vivo
+    siete_pesos = int(renta_sim * 0.07)
+    uf_estimada = 38000  # Valor aproximado UF
+    siete_uf = round(siete_pesos / uf_estimada, 2)
+
+    with col_s2:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">Tu 7% Legal Obligatorio</div>
+                <div class="metric-value">${siete_pesos:,} CLP</div>
+                <div style="font-size: 1rem; color: #0284C7; font-weight: 700;">Equivalente a ~ {siete_uf} UF / mes</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # Diagnóstico amigable dinámico
     st.markdown("<br>", unsafe_allow_html=True)
+    if renta_sim >= 1200000:
+        st.success(f"✅ **Perfil Óptimo:** Con tu aportación legal de **${siete_pesos:,} CLP**, accedes a planes completos en Isapres abiertas con cobertura en clínicas privadas.")
+    elif renta_sim >= 800000:
+        st.info(f"💡 **Perfil Apto:** Tu 7% (**${siete_pesos:,} CLP**) permite evaluar convenios de Isapre o combinaciones estratégicas de salud.")
+    else:
+        st.warning("ℹ️ **Sugerencia:** Analizaremos las opciones preferentes de Isapre o esquemas Fonasa + Seguro que mejor aprovechen tu presupuesto.")
 
-    with st.form("form_cliente_isapre", clear_on_submit=True):
-        st.subheader("📋 Antecedentes del Titular")
-        
+    st.divider()
+
+    # SECCIÓN 2: FORMULARIO DE CONTACTO
+    st.subheader("📩 Paso 2: Recibe la comparativa completa de Isapres")
+    st.caption("Ingresa tus datos para procesar tu simulación y enviarte una tabla comparativa a tu WhatsApp.")
+
+    with st.form("form_interactivo_cliente", clear_on_submit=True):
         c1, c2 = st.columns(2)
+        
         with c1:
-            nombre = st.text_input("👤 Nombre Completo *", placeholder="Ej: Constanza Morales")
+            nombre = st.text_input("👤 Nombre y Apellido *", placeholder="Ej: Constanza Morales")
             rut = st.text_input("🆔 RUT *", placeholder="Ej: 18.765.432-1")
+            telefono = st.text_input("📱 WhatsApp para enviar la comparativa *", placeholder="+56 9 1234 5678")
             fecha_nac = st.date_input("🎂 Fecha de Nacimiento", value=date(1992, 1, 1), min_value=date(1940, 1, 1))
-            telefono = st.text_input("📱 Teléfono / WhatsApp *", placeholder="+56 9 1234 5678")
 
         with c2:
-            prevision = st.selectbox("🏥 ¿Cuál es tu previsión de salud actual? *", LISTA_PREVISION)
+            prevision = st.selectbox("🏥 Previsión Actual *", LISTA_PREVISION)
             situacion = st.selectbox("💼 Situación Laboral *", SITUACION_LABORAL)
             afp = st.selectbox("🏦 AFP Actual", LISTA_AFPS)
-            renta = st.number_input("💰 Renta Imponible Estimada ($)", min_value=0, step=100000)
-
-        st.subheader("📍 Ubicación y Cargas")
-        c3, c4 = st.columns(2)
-        with c3:
             region = st.selectbox("🗺️ Región de Residencia", LISTA_REGIONES, index=6)
-            comuna = st.text_input("🏙️ Comuna", placeholder="Ej: Las Condes, Concepción, Viña del Mar")
+            comuna = st.text_input("🏙️ Comuna", placeholder="Ej: Las Condes, Concepción")
+
+        notas = st.text_area("💬 Preferencias de clínicas o cobertura (Opcional)", placeholder="Ej: Busco Clínica Indisa / Alemana, cobertura dental, plan con parto, etc.")
         
-        with c4:
-            cargas = st.number_input("👨‍👩‍👧 Número de Cargas (Hijos / Cónyuge)", min_value=0, max_value=10, step=1)
-
-        # Calculador de 7% legal
-        if renta > 0:
-            siete_calc = int(renta * 0.07)
-            st.info(f"💡 **Tu 7% legal estimado de cotización:** ${siete_calc:,} CLP / mes.".replace(",", "."))
-
-        notas = st.text_area("💬 ¿Qué buscas en tu plan? (Opcional)", placeholder="Ej: Cobertura en Clínica Alemana / Indisa, maternidad, etc.")
+        # Nota legal al pie del formulario
+        st.caption("🔒 *Servicio de asesoría libre e independiente. Respetamos la privacidad de tus datos bajo la legislación vigente.*")
         
         st.markdown("<br>", unsafe_allow_html=True)
-        enviar = st.form_submit_button("🚀 SOLICITAR COTIZACIÓN DE PLANES POR WHATSAPP")
+        enviar = st.form_submit_button("🚀 SOLICITAR COMPARATIVA MULTI-ISAPRE POR WHATSAPP")
 
         if enviar:
             if nombre and rut and telefono:
-                if "---" in prevision:
-                    st.error("Por favor selecciona una opción de previsión válida.")
-                else:
-                    df = st.session_state.prospectos
-                    nuevo_id = int(df["ID"].max() + 1) if not df.empty else 1
-                    siete_calc = int(renta * 0.07) if renta > 0 else 0
-                    
-                    nuevo_registro = pd.DataFrame([{
-                        "ID": nuevo_id,
-                        "Nombre": nombre,
-                        "RUT": rut,
-                        "Teléfono": telefono,
-                        "Fecha Nacimiento": str(fecha_nac),
-                        "Previsión Actual": prevision,
-                        "Situación Laboral": situacion,
-                        "AFP": afp,
-                        "Renta Imponible ($)": renta,
-                        "Región": region,
-                        "Comuna": comuna,
-                        "Cargas": cargas,
-                        "7% Estimado ($)": siete_calc,
-                        "Estado": "📞 Por contactar",
-                        "Notas": notas
-                    }])
-                    
-                    st.session_state.prospectos = pd.concat([st.session_state.prospectos, nuevo_registro], ignore_index=True)
-                    st.balloons()
-                    st.success("🎉 ¡Solicitud enviada con éxito! Un asesor se pondrá en contacto a la brevedad.")
+                df = st.session_state.prospectos
+                nuevo_id = int(df["ID"].max() + 1) if not df.empty else 1
+                
+                nuevo_registro = pd.DataFrame([{
+                    "ID": nuevo_id,
+                    "Nombre": nombre,
+                    "RUT": rut,
+                    "Teléfono": telefono,
+                    "Fecha Nacimiento": str(fecha_nac),
+                    "Previsión Actual": prevision,
+                    "Situación Laboral": situacion,
+                    "AFP": afp,
+                    "Renta Imponible ($)": renta_sim,
+                    "7% Legal ($)": siete_pesos,
+                    "Región": region,
+                    "Comuna": comuna,
+                    "Cargas": cargas_sim,
+                    "Estado": "📞 Por contactar",
+                    "Notas": notas
+                }])
+                
+                st.session_state.prospectos = pd.concat([st.session_state.prospectos, nuevo_registro], ignore_index=True)
+                st.balloons()
+                st.success("🎉 ¡Simulación procesada con éxito! Un asesor independiente revisará las opciones y te escribirá por WhatsApp en breve.")
             else:
                 st.error("Por favor completa los campos requeridos (*): Nombre, RUT y WhatsApp.")
 
 # -----------------------------------------------------------------------------
-# VISTA 2: CRM PRIVADO
+# VISTA 2: CRM PRIVADO INTERNO
 # -----------------------------------------------------------------------------
 else:
     st.title("💼 CRM Privado de Prospección Isapre")
@@ -210,7 +250,7 @@ else:
 
     st.divider()
 
-    st.subheader("📋 Base de Datos de Clientes Recibidos")
+    st.subheader("📋 Base de Datos de Clientes")
     filtro_est = st.multiselect("Filtrar por estado:", ESTADOS, default=ESTADOS)
     df_filtrado = df[df["Estado"].isin(filtro_est)]
     
@@ -221,7 +261,7 @@ else:
     if not df.empty:
         id_sel = st.sidebar.selectbox("Seleccionar Lead:", df["ID"].tolist(), format_func=lambda x: f"ID {x} - {df[df['ID']==x]['Nombre'].values[0]}")
         est_nuevo = st.sidebar.selectbox("Nuevo Estado:", ESTADOS)
-        if st.sidebar.button("Actualizar"):
+        if st.sidebar.button("Actualizar Estado"):
             st.session_state.prospectos.loc[st.session_state.prospectos["ID"] == id_sel, "Estado"] = est_nuevo
             st.sidebar.success("¡Estado actualizado!")
             st.rerun()
