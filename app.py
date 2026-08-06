@@ -9,8 +9,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Estilos CSS con la paleta alegre y colorida de Nueva Masvida
-# Verde (#009B3A), Naranja (#F58220), Azul (#0072CE), Púrpura (#6C2D91)
+# Estilos CSS con la paleta alegre y colorida (Verde, Naranja, Azul, Púrpura)
 st.markdown("""
     <style>
     /* Fondo general suave y fresco */
